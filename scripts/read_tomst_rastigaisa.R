@@ -3,6 +3,7 @@ library(tidyverse)
 library(lubridate)
 library(data.table)
 library(cowplot)
+library(zoo)
 
 # Abrreviastion of the study area
 abbr <- "RAS"
@@ -1136,7 +1137,6 @@ for(i in unique(df$site)){
 #
 dfc <- df3
 
-
 diffs_all <- data.frame()
 for(i in sites){
   
@@ -1183,7 +1183,7 @@ for(i in sites){
   
 }
 
-fwrite(diffs_all, "Correction_temperatures.csv")
+fwrite(diffs_all, "output/Correction_temperatures.csv")
 
 ###################################################################################
 # Delete erroneous data
@@ -1239,7 +1239,7 @@ my_mean = function(x) {
 dfc %>% mutate(my = paste0(year(date),"_",month(date))) -> dfc
 
 dfall <- data.frame()
-pdf("Temperature_graphs_spikes.pdf", 10, 12)
+pdf("visuals/Temperature_graphs_spikes.pdf", 10, 12)
 for(i in sites){
   #i <- 529
   
@@ -1577,7 +1577,7 @@ dev.off()
 ###############################################################################
 # PLOT CORRECTED
 
-pdf("Temperature_graphs_corrected.pdf", 10, 5)
+pdf("visuals/Temperature_graphs_corrected.pdf", 10, 5)
 for(i in sites){
   #i <- sites[3]
   print(i)
@@ -1613,6 +1613,6 @@ for(i in sites){
 round2 <- function(x) round(x,2)
 
 fwrite(dfall %>% select(-date) %>% 
-         mutate(across(T1:T3, round2)), "tomst_data.csv")
+         mutate(across(T1:T3, round2)), "output/tomst_data.csv")
 
 ####################################################################################

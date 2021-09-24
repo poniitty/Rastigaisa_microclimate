@@ -15,8 +15,8 @@ maxd <- "2021-09-01"
 
 #################################################################################3
 # Read year 2020 site visiting times
-maxdt <- read_csv("data/reading_times_2020.csv")
-maxdt %>%  mutate(maxdt = with_tz(maxdt, tzone = "Etc/GMT-2")) -> maxdt
+maxdt20 <- read_csv("data/reading_times_2020.csv")
+maxdt20 %>%  mutate(maxdt = with_tz(maxdt, tzone = "Etc/GMT-2")) -> maxdt20
 
 # List logger data files to read
 f <- list.files("data/tomst",pattern = "data_", full.names = T, recursive = T)
@@ -98,6 +98,12 @@ df %>% group_by(site) %>%
   summarise(maxdt = max(datetime)) -> maxdt
 maxdt <- full_join(maxdt, fi %>% select(site, tomst_id) %>% filter(!duplicated(.)))
 fwrite(maxdt, "reading_times_2021.csv")
+
+# Replace the measurements of the time of the 2020 visiting with NA
+# as reading the logger may influence the measurements
+full_join(df, maxdt20 %>% select(-tomst_id) %>% mutate(visit = 1) %>% rename(datetime = maxdt)) %>% 
+  mutate(across(T1:moist, ~ifelse(is.na(visit), ., NA))) %>%
+  select(-visit) -> df
 
 ############################################################################
 # PLOTTINGS

@@ -97,7 +97,7 @@ sites <- unique(df$site)
 df %>% group_by(site) %>% 
   summarise(maxdt = max(datetime)) -> maxdt
 maxdt <- full_join(maxdt, fi %>% select(site, tomst_id) %>% filter(!duplicated(.)))
-fwrite(maxdt, "reading_times_2021.csv")
+fwrite(maxdt, "data/reading_times_2021.csv")
 
 # Replace the measurements of the time of the 2020 visiting with NA
 # as reading the logger may influence the measurements

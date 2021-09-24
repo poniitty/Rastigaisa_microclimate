@@ -1,2 +1,2 @@
 # Rastigaisa_microclimate
-Handing microclimate datasets from Rastigaisa area, Norway
+Handling microclimate datasets from Rastigaisa area, Norway

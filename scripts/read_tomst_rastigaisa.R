@@ -341,7 +341,7 @@ siteid <- 11
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-30")))
 probls <- c()
-hattu <- c()
+hattu <- c() # hattu broken during summer 2020, but does not  seem to affect data
 
 df2 %>% mutate(probl = ifelse(site == siteid &
                                 date %in% office,
@@ -352,6 +352,23 @@ df2 %>% mutate(probl = ifelse(site == siteid &
   mutate(probl = ifelse(site == siteid &
                           date %in% hattu,
                         3, probl)) -> df2
+# SITE = 12 
+siteid <- 12
+
+office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-30")))
+probls <- c()
+hattu <- c() #  hattu broken when visited 2021, but does not seem to affect data
+
+df2 %>% mutate(probl = ifelse(site == siteid &
+                                date %in% office,
+                              2, probl)) %>% 
+  mutate(probl = ifelse(site == siteid &
+                          date %in% probls,
+                        1, probl)) %>% 
+  mutate(probl = ifelse(site == siteid &
+                          date %in% hattu,
+                        3, probl)) -> df2
+
 # SITE = 15
 siteid <- 15
 
@@ -438,7 +455,7 @@ siteid <- 29
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-29")))
 probls <- c()
-hattu <- c()
+hattu <- c() # hattu detached when visited 2021, does not seem to affect data
 
 df2 %>% mutate(probl = ifelse(site == siteid &
                                 date %in% office,
@@ -486,7 +503,7 @@ siteid <- 40
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-30")))
 probls <- c()
-hattu <- c()
+hattu <- c() # hattu broken and detached when visited 2020, but does not affect data
 
 df2 %>% mutate(probl = ifelse(site == siteid &
                                 date %in% office,
@@ -518,7 +535,7 @@ siteid <- 44
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-30")))
 probls <- c()
-hattu <- c()
+hattu <- c() # hattu broken and detached when visited 2020 but does not affect data
 
 df2 %>% mutate(probl = ifelse(site == siteid &
                                 date %in% office,
@@ -682,7 +699,7 @@ df2 %>% mutate(probl = ifelse(site == siteid &
                           date %in% hattu,
                         3, probl)) -> df2
 
-# SITE = 68
+# SITE = 68 
 siteid <- 68
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-30")))
@@ -704,7 +721,7 @@ siteid <- 70
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-30")))
 probls <- c()
-hattu <- c()
+hattu <- c(as_date(as_date("2020-05-28"):as_date("2020-08-02"))) #hattu detached when visited 2020
 
 df2 %>% mutate(probl = ifelse(site == siteid &
                                 date %in% office,
@@ -738,7 +755,7 @@ siteid <- 73
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-29")))
 probls <- c()
-hattu <- c()
+hattu <- c() # hattu detached when visited 2020, does not affect data
 
 df2 %>% mutate(probl = ifelse(site == siteid &
                                 date %in% office,
@@ -806,7 +823,7 @@ siteid <- 88
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-30")))
 probls <- c()
-hattu <- c()
+hattu <- c(as_date(as_date("2021-06-29"):as_date("2021-08-01"))) # hattu detached when visited 2021
 
 df2 %>% mutate(probl = ifelse(site == siteid &
                                 date %in% office,
@@ -823,7 +840,7 @@ siteid <- 92
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-30")))
 probls <- c()
-hattu <- c()
+hattu <- c(as_date(as_date("2021-06-16"):as_date("2021-08-01"))) # hattu detached and tomst broken when visited 2021
 
 df2 %>% mutate(probl = ifelse(site == siteid &
                                 date %in% office,
@@ -874,7 +891,7 @@ siteid <- 98
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-30")))
 probls <- c()
-hattu <- c()
+hattu <- c(as_date(as_date("2021-06-25"):as_date("2021-08-01"))) # hattu detached when visited 2021
 
 df2 %>% mutate(probl = ifelse(site == siteid &
                                 date %in% office,
@@ -924,7 +941,7 @@ df2 %>% mutate(probl = ifelse(site == siteid &
 siteid <- 104
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-07-01")))
-probls <- c()
+probls <- c(as_date(as_date("2019-07-02"):as_date("2021-07-06")))
 hattu <- c()
 
 df2 %>% mutate(probl = ifelse(site == siteid &
@@ -975,7 +992,7 @@ df2 %>% mutate(probl = ifelse(site == siteid &
 siteid <- 110
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-06-29")))
-probls <- c()
+probls <- c(as_date(as_date("2020-06-25"):as_date("2020-07-28")))
 hattu <- c()
 
 df2 %>% mutate(probl = ifelse(site == siteid &

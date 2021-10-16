@@ -116,6 +116,12 @@ full_join(df, maxdt20 %>% select(-tomst_id) %>% mutate(visit = 1) %>% rename(dat
   mutate(across(T1:moist, ~ifelse(is.na(visit), ., NA))) %>%
   select(-visit) -> df
 
+# Remove the measurements of the time of the 2021 visiting
+# as reading the logger may influence the measurements
+full_join(df, maxdt %>% select(-tomst_id) %>% mutate(visit = 1) %>% rename(datetime = maxdt)) %>% 
+  filter(is.na(visit)) %>%
+  select(-visit) -> df
+
 ############################################################################
 # PLOTTINGS
 ############################################################################
@@ -1258,7 +1264,7 @@ dfc %>% mutate(my = paste0(year(date),"_",month(date))) -> dfc
 dfall <- data.frame()
 pdf("visuals/Temperature_graphs_spikes.pdf", 10, 12)
 for(i in sites){
-  #i <- 529
+  #i <- 1
   
   print(i)
   dfc %>% filter(site == i) %>% 
@@ -1275,7 +1281,7 @@ for(i in sites){
   
   dftemp <- data.frame()
   for(ii in unique(temp$my)){
-    #ii <- "2018_7"
+    #ii <- "2019_7"
     print(ii)
     
     # T1

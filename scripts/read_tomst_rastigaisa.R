@@ -253,6 +253,7 @@ times <- seq(floor_date(as_date(min(df2$date)), "month"),
              by = "month")
 
 df2 %>% mutate(probl = 0) -> df2
+
 for(siteid in sites){
   #siteid <- 120
   print(siteid)
@@ -1247,408 +1248,434 @@ dfc %>% left_join(., missh) %>%
 
 ##############################################################
 # DETECT ANOMALIES CROSS-RELATING THE SITES
+# THIS SECTION IS DISABLED FOR NOW!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-my_sd = function(x) {
-  if(length(x) %% 2 == 0L) { return(sd(x, na.rm = T)) }
-  if(length(x) %% 2 == 1L) { if(length(x) == 3){
-    return(sd(x[-ceiling(0.5*length(x))])) 
-  } else {
-    mid <- ceiling(0.5*length(x))
-    return(sd(x[-c(mid-1, mid, mid+1)], na.rm = T))
-  }  }
-}
-my_mean = function(x) {
-  if(length(x) %% 2 == 0L) { return(mean(x)) }
-  if(length(x) %% 2 == 1L) {
-    if(length(x) == 3){
-      return(mean(x[-ceiling(0.5*length(x))])) 
-    } else {
-      if(length(x) == 5){
-        mid <- ceiling(0.5*length(x))
-        return(mean(x[-c(mid-1, mid, mid+1)]))
-      } else {
-        mid <- ceiling(0.5*length(x))
-        return(mean(x[-c(mid-2, mid-1, mid, mid+1, mid+2)]))
-      } 
-    }
-  }
-}
-
-
-
-dfc %>% mutate(my = paste0(year(date),"_",month(date))) -> dfc
-
-dfall <- data.frame()
-pdf("visuals/Temperature_graphs_spikes.pdf", 10, 12)
-for(i in sites){
-  #i <- 1
-  
-  print(i)
-  dfc %>% filter(site == i) %>% 
-    filter(probl != 1) %>% 
-    mutate(timediff1 = as.numeric(datetime - lag(datetime)),
-           timediff2 = as.numeric(lead(datetime) - datetime)) %>% 
-    filter(timediff1 %in% c(10,15)|timediff2 %in% c(10,15)) %>% 
-    mutate(timediff1 = as.numeric(datetime - lag(datetime)),
-           timediff2 = as.numeric(lead(datetime) - datetime)) -> temp
-  
-  if(temp %>% pull(timediff1) %>% min(., na.rm = T) < 10){
-    temp %>% filter(timediff1 + timediff2 >= 20 | is.na(timediff1 + timediff2)) -> temp
-  }
-  
-  dftemp <- data.frame()
-  for(ii in unique(temp$my)){
-    #ii <- "2019_7"
-    print(ii)
-    
-    # T1
-    
-    temp %>% filter(my == ii) %>% 
-      select(datetime, T1, site) %>% 
-      filter(complete.cases(.)) %>% 
-      rename(T1f = T1,
-             site2 = site) -> temp2
-    
-    rows <- NROW(temp2)
-    
-    temp2 %>%
-      left_join(., dfc) %>% 
-      filter(site != i) %>% 
-      arrange(site, datetime) %>% 
-      mutate(me = abs(T1f-T1)) %>% 
-      group_by(site) %>% 
-      summarise(me = mean(me),
-                n = n()) %>% 
-      filter(n > rows*0.95) %>% 
-      arrange(me) %>% pull(site) -> mes
-    
-    if(length(mes) > 0){
-      temp2 %>%
-        left_join(., dfc %>% filter(site == mes[1])) %>% 
-        mutate(me = T1f-T1) %>% 
-        mutate(lag_T1 = me - lag(me)) %>% 
-        mutate(lead_T1 = me - lead(me)) %>%
-        mutate(lag_T1f = T1f - lag(T1f)) %>% 
-        mutate(lead_T1f = T1f - lead(T1f)) %>% 
-        mutate(error = ifelse(abs(lead_T1) > 3 & abs(lag_T1) > 3, 1, 0)) %>% 
-        mutate(error = ifelse(abs(me) > 5 & abs(lag_T1)+abs(lead_T1) > 2, 1, error)) %>% 
-        mutate(error = error + lag(error) + lead(error)) %>% 
-        mutate(error = ifelse(error > 1, 1, error)) %>% 
-        mutate(T1f = ifelse((!is.na(error) & !is.na(lag_T1f) & error == 1 & abs(lag_T1f) >= 0.375) | (!is.na(error) & !is.na(lead_T1f) & error == 1 & abs(lead_T1f) >= 0.375), NA, T1f),
-               me = ifelse((!is.na(error) & !is.na(lag_T1f) & error == 1 & abs(lag_T1f) >= 0.375) | (!is.na(error) & !is.na(lead_T1f) & error == 1 & abs(lead_T1f) >= 0.375), NA, me)) %>% 
-        mutate(error = ifelse(error == 1 & !is.na(T1f), 0, error)) %>% 
-        mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T1,
-               T1f = ifelse(is.na(T1f), fill, T1f),
-               fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T1,
-               T1f = ifelse(is.na(T1f), fill, T1f),
-               fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T1,
-               T1f = ifelse(is.na(T1f), fill, T1f)) -> temp2
-      
-      # temp2 %>% as.matrix() %>% edit()
-      temp2 %>% ggplot(aes_string(x="datetime")) +
-        geom_line(aes_string(y = "T1f"), col = "cornflowerblue") +
-        geom_line(aes_string(y = "T1"), col = "brown1") +
-        geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
-        #geom_line(aes_string(y = "rollsd_T1"), col = "green") +
-        geom_line(aes_string(y = "error"), col = "black") +
-        theme_minimal() +
-        ylab("T1") + xlab("Date")+
-        ggtitle(paste(i, ii)) -> GG1
-      
-      temp2 %>% mutate(me = T1f-T1) %>% 
-        mutate(rollsd_T1 = rollapply(me, width=33, FUN=my_sd, fill = NA)+0.001) %>% 
-        mutate(lag_T1 = me - lag(me)) %>% 
-        mutate(lead_T1 = me - lead(me)) %>% 
-        mutate(lag_T1f = T1f - lag(T1f)) %>% 
-        mutate(lead_T1f = T1f - lead(T1f)) %>% 
-        mutate(fac = (abs(lag_T1)+abs(lead_T1))/rollsd_T1) %>% 
-        mutate(error = ifelse(fac > 10, 1, 0)) %>% 
-        mutate(error = ifelse(abs(me) > 1 & abs(lag_T1) > 1 & fac > 4, 1, error),
-               error = ifelse(abs(me) > 1 & abs(lead_T1) > 1 & fac > 4, 1, error)) %>% 
-        mutate(error = ifelse(error == 1 & lead_T1f*lag_T1f >= 0, 1, error)) %>% 
-        mutate(error = error + lag(error) + lead(error)) %>% 
-        mutate(error = ifelse(error > 1, 1, error)) %>% 
-        mutate(T1f = ifelse((!is.na(error) & !is.na(lag_T1f) & error == 1 & abs(lag_T1f) >= 0.375) | (!is.na(error) & !is.na(lead_T1f) & error == 1 & abs(lead_T1f) >= 0.375), NA, T1f),
-               me = ifelse((!is.na(error) & !is.na(lag_T1f) & error == 1 & abs(lag_T1f) >= 0.375) | (!is.na(error) & !is.na(lead_T1f) & error == 1 & abs(lead_T1f) >= 0.375), NA, me)) %>% 
-        mutate(error = ifelse(error == 1 & !is.na(T1f), 0, error)) %>% 
-        mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T1,
-               T1f = ifelse(is.na(T1f), fill, T1f),
-               fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T1,
-               T1f = ifelse(is.na(T1f), fill, T1f),
-               fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T1,
-               T1f = ifelse(is.na(T1f), fill, T1f)) -> temp_T1
-      
-      temp_T1 %>% ggplot(aes_string(x="datetime")) +
-        geom_line(aes_string(y = "T1f"), col = "cornflowerblue") +
-        geom_line(aes_string(y = "T1"), col = "brown1") +
-        geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
-        geom_line(aes_string(y = "rollsd_T1"), col = "green") +
-        geom_line(aes_string(y = "error"), col = "black") +
-        theme_minimal() +
-        ylab("T1") + xlab("Date")+
-        ggtitle(paste(i, ii)) -> GG2
-    } else {
-      temp %>% filter(my == ii) %>% 
-        select(datetime, T1) %>% 
-        rename(T1f = T1) -> temp_T1
-    }
-    
-    #################################### 
-    # T2
-    
-    temp %>% filter(my == ii) %>% 
-      select(datetime, T2) %>% 
-      filter(complete.cases(.)) %>% 
-      rename(T2f = T2) -> temp2
-    
-    rows <- NROW(temp2)
-    
-    temp2 %>%
-      left_join(., dfc) %>% 
-      filter(site != i) %>% 
-      arrange(site, datetime) %>% 
-      mutate(me = abs(T2f-T2)) %>% 
-      group_by(site) %>% 
-      summarise(me = mean(me),
-                n = n()) %>% 
-      filter(n > rows*0.95) %>% 
-      arrange(me) %>% pull(site) -> mes
-    
-    if(length(mes) > 0){
-      
-      temp2 %>%
-        left_join(., dfc %>% filter(site == mes[1])) %>% 
-        mutate(me = T2f-T2) %>% 
-        mutate(lag_T2 = me - lag(me)) %>% 
-        mutate(lead_T2 = me - lead(me)) %>%
-        mutate(lag_T2f = T2f - lag(T2f)) %>% 
-        mutate(lead_T2f = T2f - lead(T2f)) %>% 
-        mutate(error = ifelse(abs(lead_T2) > 10 & abs(lag_T2) > 10, 1, 0)) %>% 
-        mutate(error = ifelse(abs(me) > 10 & abs(lag_T2)+abs(lead_T2) > 10, 1, error)) %>% 
-        mutate(error = error + lag(error) + lead(error)) %>% 
-        mutate(error = ifelse(error > 1, 1, error)) %>% 
-        mutate(T2f = ifelse((!is.na(error) & !is.na(lag_T2f) & error == 1 & abs(lag_T2f) >= 0.375) | (!is.na(error) & !is.na(lead_T2f) & error == 1 & abs(lead_T2f) >= 0.375), NA, T2f),
-               me = ifelse((!is.na(error) & !is.na(lag_T2f) & error == 1 & abs(lag_T2f) >= 0.375) | (!is.na(error) & !is.na(lead_T2f) & error == 1 & abs(lead_T2f) >= 0.375), NA, me)) %>% 
-        mutate(error = ifelse(error == 1 & !is.na(T2f), 0, error)) %>% 
-        mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T2,
-               T2f = ifelse(is.na(T2f), fill, T2f),
-               fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T2,
-               T2f = ifelse(is.na(T2f), fill, T2f),
-               fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T2,
-               T2f = ifelse(is.na(T2f), fill, T2f)) -> temp2
-      
-      # temp2 %>% as.matrix() %>% edit()
-      temp2 %>% ggplot(aes_string(x="datetime")) +
-        geom_line(aes_string(y = "T2f"), col = "cornflowerblue") +
-        geom_line(aes_string(y = "T2"), col = "brown1") +
-        geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
-        #geom_line(aes_string(y = "rollsd_T2"), col = "green") +
-        geom_line(aes_string(y = "error"), col = "black") +
-        theme_minimal() +
-        ylab("T2") + xlab("Date") -> GG3
-      
-      temp2 %>% mutate(time = paste(hour(datetime), minute(datetime), sep = ":")) %>% 
-        group_by(time) %>% summarise(mean_me = quantile(me, 0.97, na.rm = T),
-                                     min_me = quantile(me, 0.03, na.rm = T)) %>% 
-        right_join(temp2 %>% mutate(time = paste(hour(datetime), minute(datetime), sep = ":"))) %>%
-        arrange(datetime) %>% 
-        as.data.table() -> temp2
-      
-      temp2 %>% mutate(me = T2f-T2) %>% 
-        mutate(rollsd_T2 = rollapply(me, width=33, FUN=my_sd, fill = NA)+0.001) %>% 
-        mutate(lag_T2 = me - lag(me)) %>% 
-        mutate(lead_T2 = me - lead(me)) %>% 
-        mutate(lag_T2f = T2f - lag(T2f)) %>% 
-        mutate(lead_T2f = T2f - lead(T2f)) %>% 
-        mutate(fac = (abs(lag_T2)+abs(lead_T2))/rollsd_T2) %>% 
-        mutate(error = ifelse(fac > 10, 1, 0)) %>% 
-        mutate(error = ifelse(abs(me) > 3 & abs(lag_T2) > 3 & fac > 5, 1, error),
-               error = ifelse(abs(me) > 3 & abs(lead_T2) > 3 & fac > 5, 1, error)) %>% 
-        mutate(error = ifelse(me > 0 & mean_me > 0 & me < mean_me*2, 0, error)) %>% 
-        mutate(error = ifelse(me < 0 & mean_me < 0 & me > min_me*2, 0, error)) %>% 
-        mutate(error = ifelse(error == 1 & lead_T2f*lag_T2f >= 0, 1, error)) %>% 
-        mutate(error = error + lag(error) + lead(error)) %>% 
-        mutate(error = ifelse(error > 1, 1, error)) %>% #as.matrix() %>% edit()
-        mutate(T2f = ifelse((!is.na(error) & !is.na(lag_T2f) & error == 1 & abs(lag_T2f) >= 0.375) | (!is.na(error) & !is.na(lead_T2f) & error == 1 & abs(lead_T2f) >= 0.375), NA, T2f),
-               me = ifelse((!is.na(error) & !is.na(lag_T2f) & error == 1 & abs(lag_T2f) >= 0.375) | (!is.na(error) & !is.na(lead_T2f) & error == 1 & abs(lead_T2f) >= 0.375), NA, me)) %>% 
-        mutate(error = ifelse(error == 1 & !is.na(T2f), 0, error)) %>% 
-        mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T2,
-               T2f = ifelse(is.na(T2f), fill, T2f),
-               fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T2,
-               T2f = ifelse(is.na(T2f), fill, T2f),
-               fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T2,
-               T2f = ifelse(is.na(T2f), fill, T2f)) -> temp_T2
-      
-      temp_T2 %>% ggplot(aes_string(x="datetime")) +
-        geom_line(aes_string(y = "T2f"), col = "cornflowerblue") +
-        geom_line(aes_string(y = "T2"), col = "brown1") +
-        geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
-        geom_line(aes_string(y = "rollsd_T2"), col = "green") +
-        geom_line(aes_string(y = "error"), col = "black") +
-        theme_minimal() +
-        ylab("T2") + xlab("Date") -> GG4
-      
-    } else {
-      temp %>% filter(my == ii) %>% 
-        select(datetime, T2) %>% 
-        rename(T2f = T2)  -> temp_T2
-    }
-    
-    #######################################3
-    # T3
-    
-    temp %>% filter(my == ii) %>% 
-      select(datetime, T3) %>% 
-      filter(complete.cases(.)) %>% 
-      rename(T3f = T3) -> temp2
-    
-    rows <- NROW(temp2)
-    
-    temp2 %>%
-      left_join(., dfc) %>% 
-      filter(site != i) %>% 
-      arrange(site, datetime) %>% 
-      mutate(me = abs(T3f-T3)) %>% 
-      group_by(site) %>% 
-      summarise(me = mean(me),
-                n = n()) %>% 
-      filter(n > rows*0.95) %>% 
-      arrange(me) %>% pull(site) -> mes
-    
-    if(length(mes) > 0){
-      
-      temp2 %>%
-        left_join(., dfc %>% filter(site == mes[1])) %>% 
-        mutate(me = T3f-T3) %>% 
-        mutate(lag_T3 = me - lag(me)) %>% 
-        mutate(lead_T3 = me - lead(me)) %>%
-        mutate(lag_T3f = T3f - lag(T3f)) %>% 
-        mutate(lead_T3f = T3f - lead(T3f)) %>% 
-        mutate(error = ifelse(abs(lead_T3) > 10 & abs(lag_T3) > 10, 1, 0)) %>% 
-        mutate(error = ifelse(abs(me) > 10 & abs(lag_T3)+abs(lead_T3) > 10, 1, error)) %>% 
-        mutate(error = error + lag(error) + lead(error)) %>% 
-        mutate(error = ifelse(error > 1, 1, error)) %>% 
-        mutate(T3f = ifelse((!is.na(error) & !is.na(lag_T3f) & error == 1 & abs(lag_T3f) >= 0.375) | (!is.na(error) & !is.na(lead_T3f) & error == 1 & abs(lead_T3f) >= 0.375), NA, T3f),
-               me = ifelse((!is.na(error) & !is.na(lag_T3f) & error == 1 & abs(lag_T3f) >= 0.375) | (!is.na(error) & !is.na(lead_T3f) & error == 1 & abs(lead_T3f) >= 0.375), NA, me)) %>% 
-        mutate(error = ifelse(error == 1 & !is.na(T3f), 0, error)) %>% 
-        mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T3,
-               T3f = ifelse(is.na(T3f), fill, T3f),
-               fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T3,
-               T3f = ifelse(is.na(T3f), fill, T3f),
-               fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T3,
-               T3f = ifelse(is.na(T3f), fill, T3f)) -> temp2
-      
-      # temp2 %>% as.matrix() %>% edit()
-      temp2 %>% ggplot(aes_string(x="datetime")) +
-        geom_line(aes_string(y = "T3f"), col = "cornflowerblue") +
-        geom_line(aes_string(y = "T3"), col = "brown1") +
-        geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
-        #geom_line(aes_string(y = "rollsd_T3"), col = "green") +
-        geom_line(aes_string(y = "error"), col = "black") +
-        theme_minimal() +
-        ylab("T3") + xlab("Date") -> GG5
-      
-      temp2 %>% mutate(time = paste(hour(datetime), minute(datetime), sep = ":")) %>% 
-        group_by(time) %>% summarise(mean_me = quantile(me, 0.97, na.rm = T),
-                                     min_me = quantile(me, 0.03, na.rm = T)) %>% 
-        right_join(temp2 %>% mutate(time = paste(hour(datetime), minute(datetime), sep = ":"))) %>%
-        arrange(datetime) %>% 
-        as.data.table() -> temp2
-      
-      temp2 %>% mutate(me = T3f-T3) %>% 
-        #filter(datetime >= "2020-07-05 07:00:00") %>% 
-        mutate(rollsd_T3 = rollapply(me, width=33, FUN=my_sd, fill = NA)+0.001) %>% 
-        mutate(lag_T3 = me - lag(me)) %>% 
-        mutate(lead_T3 = me - lead(me)) %>% 
-        mutate(lag_T3f = T3f - lag(T3f)) %>% 
-        mutate(lead_T3f = T3f - lead(T3f)) %>% 
-        mutate(fac = (abs(lag_T3)+abs(lead_T3))/rollsd_T3) %>% 
-        mutate(error = ifelse(fac > 10, 1, 0)) %>% 
-        mutate(error = ifelse(abs(me) > 4 & abs(lag_T3) > 4 & fac > 7, 1, error),
-               error = ifelse(abs(me) > 4 & abs(lead_T3) > 4 & fac > 7, 1, error)) %>% 
-        mutate(error = ifelse(me > 0 & mean_me > 0 & me < mean_me*2, 0, error)) %>% 
-        mutate(error = ifelse(me < 0 & mean_me < 0 & me > min_me*2, 0, error)) %>% 
-        mutate(error = ifelse(error == 1 & lead_T3f*lag_T3f >= 0, 1, error)) %>% 
-        mutate(error = error + lag(error) + lead(error)) %>% 
-        mutate(error = ifelse(error > 1, 1, error)) %>% 
-        mutate(T3f = ifelse((!is.na(error) & !is.na(lag_T3f) & error == 1 & abs(lag_T3f) >= 0.375) | (!is.na(error) & !is.na(lead_T3f) & error == 1 & abs(lead_T3f) >= 0.375), NA, T3f),
-               me = ifelse((!is.na(error) & !is.na(lag_T3f) & error == 1 & abs(lag_T3f) >= 0.375) | (!is.na(error) & !is.na(lead_T3f) & error == 1 & abs(lead_T3f) >= 0.375), NA, me)) %>% 
-        mutate(error = ifelse(error == 1 & !is.na(T3f), 0, error)) %>% 
-        mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T3,
-               T3f = ifelse(is.na(T3f), fill, T3f),
-               fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T3,
-               T3f = ifelse(is.na(T3f), fill, T3f)) -> temp_T3
-      
-      # temp_T3 %>% filter(datetime > "2020-01-27") %>% as.matrix() %>% edit()
-      temp_T3 %>% ggplot(aes_string(x="datetime")) +
-        geom_line(aes_string(y = "T3f"), col = "cornflowerblue") +
-        geom_line(aes_string(y = "T3"), col = "brown1") +
-        geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
-        geom_line(aes_string(y = "rollsd_T3"), col = "green") +
-        geom_line(aes_string(y = "error"), col = "black") +
-        theme_minimal() +
-        ylab("T3") + xlab("Date") -> GG6
-      
-      print(plot_grid(plotlist = list(GG1,GG2,GG3,GG4,GG5,GG6), nrow = 3))
-      
-    } else {
-      temp %>% filter(my == ii) %>% 
-        select(datetime, T3) %>% 
-        rename(T3f = T3) -> temp_T3
-    }
-    
-    temp2 <- full_join(temp %>% filter(my == ii) %>% select(site, datetime, moist, date, probl),
-                       temp_T1 %>% select(datetime, T1f) %>% 
-                         rename(T1 = T1f))
-    temp2 <- full_join(temp2,
-                       temp_T2 %>% select(datetime, T2f) %>% 
-                         rename(T2 = T2f))
-    temp2 <- full_join(temp2,
-                       temp_T3 %>% select(datetime, T3f) %>% 
-                         rename(T3 = T3f))
-    
-    dftemp <- bind_rows(dftemp,temp2)
-    
-  }
-  dfall <- bind_rows(dfall, dftemp)
-}
-dev.off()
+# my_sd = function(x) {
+#   if(length(x) %% 2 == 0L) { return(sd(x, na.rm = T)) }
+#   if(length(x) %% 2 == 1L) { if(length(x) == 3){
+#     return(sd(x[-ceiling(0.5*length(x))])) 
+#   } else {
+#     mid <- ceiling(0.5*length(x))
+#     return(sd(x[-c(mid-1, mid, mid+1)], na.rm = T))
+#   }  }
+# }
+# my_mean = function(x) {
+#   if(length(x) %% 2 == 0L) { return(mean(x)) }
+#   if(length(x) %% 2 == 1L) {
+#     if(length(x) == 3){
+#       return(mean(x[-ceiling(0.5*length(x))])) 
+#     } else {
+#       if(length(x) == 5){
+#         mid <- ceiling(0.5*length(x))
+#         return(mean(x[-c(mid-1, mid, mid+1)]))
+#       } else {
+#         mid <- ceiling(0.5*length(x))
+#         return(mean(x[-c(mid-2, mid-1, mid, mid+1, mid+2)]))
+#       } 
+#     }
+#   }
+# }
+# 
+# 
+# 
+# dfc %>% mutate(my = paste0(year(date),"_",month(date))) -> dfc
+# 
+# dfall <- data.frame()
+# pdf("visuals/Temperature_graphs_spikes.pdf", 10, 12)
+# for(i in sites){
+#   #i <- 1
+#   
+#   print(i)
+#   dfc %>% filter(site == i) %>% 
+#     filter(probl != 1) %>% 
+#     mutate(timediff1 = as.numeric(datetime - lag(datetime)),
+#            timediff2 = as.numeric(lead(datetime) - datetime)) %>% 
+#     filter(timediff1 %in% c(10,15)|timediff2 %in% c(10,15)) %>% 
+#     mutate(timediff1 = as.numeric(datetime - lag(datetime)),
+#            timediff2 = as.numeric(lead(datetime) - datetime)) -> temp
+#   
+#   if(temp %>% pull(timediff1) %>% min(., na.rm = T) < 10){
+#     temp %>% filter(timediff1 + timediff2 >= 20 | is.na(timediff1 + timediff2)) -> temp
+#   }
+#   
+#   dftemp <- data.frame()
+#   for(ii in unique(temp$my)){
+#     #ii <- "2019_7"
+#     print(ii)
+#     
+#     # T1
+#     
+#     temp %>% filter(my == ii) %>% 
+#       select(datetime, T1, site) %>% 
+#       filter(complete.cases(.)) %>% 
+#       rename(T1f = T1,
+#              site2 = site) -> temp2
+#     
+#     rows <- NROW(temp2)
+#     
+#     temp2 %>%
+#       left_join(., dfc) %>% 
+#       filter(site != i) %>% 
+#       arrange(site, datetime) %>% 
+#       mutate(me = abs(T1f-T1)) %>% 
+#       group_by(site) %>% 
+#       summarise(me = mean(me),
+#                 n = n()) %>% 
+#       filter(n > rows*0.95) %>% 
+#       arrange(me) %>% pull(site) -> mes
+#     
+#     if(length(mes) > 0){
+#       temp2 %>%
+#         left_join(., dfc %>% filter(site == mes[1])) %>% 
+#         mutate(me = T1f-T1) %>% 
+#         mutate(lag_T1 = me - lag(me)) %>% 
+#         mutate(lead_T1 = me - lead(me)) %>%
+#         mutate(lag_T1f = T1f - lag(T1f)) %>% 
+#         mutate(lead_T1f = T1f - lead(T1f)) %>% 
+#         mutate(error = ifelse(abs(lead_T1) > 3 & abs(lag_T1) > 3, 1, 0)) %>% 
+#         mutate(error = ifelse(abs(me) > 5 & abs(lag_T1)+abs(lead_T1) > 2, 1, error)) %>% 
+#         mutate(error = error + lag(error) + lead(error)) %>% 
+#         mutate(error = ifelse(error > 1, 1, error)) %>% 
+#         mutate(T1f = ifelse((!is.na(error) & !is.na(lag_T1f) & error == 1 & abs(lag_T1f) >= 0.375) | (!is.na(error) & !is.na(lead_T1f) & error == 1 & abs(lead_T1f) >= 0.375), NA, T1f),
+#                me = ifelse((!is.na(error) & !is.na(lag_T1f) & error == 1 & abs(lag_T1f) >= 0.375) | (!is.na(error) & !is.na(lead_T1f) & error == 1 & abs(lead_T1f) >= 0.375), NA, me)) %>% 
+#         mutate(error = ifelse(error == 1 & !is.na(T1f), 0, error)) %>% 
+#         mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T1,
+#                T1f = ifelse(is.na(T1f), fill, T1f),
+#                fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T1,
+#                T1f = ifelse(is.na(T1f), fill, T1f),
+#                fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T1,
+#                T1f = ifelse(is.na(T1f), fill, T1f)) -> temp2
+#       
+#       # temp2 %>% as.matrix() %>% edit()
+#       temp2 %>% ggplot(aes_string(x="datetime")) +
+#         geom_line(aes_string(y = "T1f"), col = "cornflowerblue") +
+#         geom_line(aes_string(y = "T1"), col = "brown1") +
+#         geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
+#         #geom_line(aes_string(y = "rollsd_T1"), col = "green") +
+#         geom_line(aes_string(y = "error"), col = "black") +
+#         theme_minimal() +
+#         ylab("T1") + xlab("Date")+
+#         ggtitle(paste(i, ii)) -> GG1
+#       
+#       temp2 %>% mutate(me = T1f-T1) %>% 
+#         mutate(rollsd_T1 = rollapply(me, width=33, FUN=my_sd, fill = NA)+0.001) %>% 
+#         mutate(lag_T1 = me - lag(me)) %>% 
+#         mutate(lead_T1 = me - lead(me)) %>% 
+#         mutate(lag_T1f = T1f - lag(T1f)) %>% 
+#         mutate(lead_T1f = T1f - lead(T1f)) %>% 
+#         mutate(fac = (abs(lag_T1)+abs(lead_T1))/rollsd_T1) %>% 
+#         mutate(error = ifelse(fac > 10, 1, 0)) %>% 
+#         mutate(error = ifelse(abs(me) > 1 & abs(lag_T1) > 1 & fac > 4, 1, error),
+#                error = ifelse(abs(me) > 1 & abs(lead_T1) > 1 & fac > 4, 1, error)) %>% 
+#         mutate(error = ifelse(error == 1 & lead_T1f*lag_T1f >= 0, 1, error)) %>% 
+#         mutate(error = error + lag(error) + lead(error)) %>% 
+#         mutate(error = ifelse(error > 1, 1, error)) %>% 
+#         mutate(T1f = ifelse((!is.na(error) & !is.na(lag_T1f) & error == 1 & abs(lag_T1f) >= 0.375) | (!is.na(error) & !is.na(lead_T1f) & error == 1 & abs(lead_T1f) >= 0.375), NA, T1f),
+#                me = ifelse((!is.na(error) & !is.na(lag_T1f) & error == 1 & abs(lag_T1f) >= 0.375) | (!is.na(error) & !is.na(lead_T1f) & error == 1 & abs(lead_T1f) >= 0.375), NA, me)) %>% 
+#         mutate(error = ifelse(error == 1 & !is.na(T1f), 0, error)) %>% 
+#         mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T1,
+#                T1f = ifelse(is.na(T1f), fill, T1f),
+#                fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T1,
+#                T1f = ifelse(is.na(T1f), fill, T1f),
+#                fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T1,
+#                T1f = ifelse(is.na(T1f), fill, T1f)) -> temp_T1
+#       
+#       temp_T1 %>% ggplot(aes_string(x="datetime")) +
+#         geom_line(aes_string(y = "T1f"), col = "cornflowerblue") +
+#         geom_line(aes_string(y = "T1"), col = "brown1") +
+#         geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
+#         geom_line(aes_string(y = "rollsd_T1"), col = "green") +
+#         geom_line(aes_string(y = "error"), col = "black") +
+#         theme_minimal() +
+#         ylab("T1") + xlab("Date")+
+#         ggtitle(paste(i, ii)) -> GG2
+#     } else {
+#       temp %>% filter(my == ii) %>% 
+#         select(datetime, T1) %>% 
+#         rename(T1f = T1) -> temp_T1
+#     }
+#     
+#     #################################### 
+#     # T2
+#     
+#     temp %>% filter(my == ii) %>% 
+#       select(datetime, T2) %>% 
+#       filter(complete.cases(.)) %>% 
+#       rename(T2f = T2) -> temp2
+#     
+#     rows <- NROW(temp2)
+#     
+#     temp2 %>%
+#       left_join(., dfc) %>% 
+#       filter(site != i) %>% 
+#       arrange(site, datetime) %>% 
+#       mutate(me = abs(T2f-T2)) %>% 
+#       group_by(site) %>% 
+#       summarise(me = mean(me),
+#                 n = n()) %>% 
+#       filter(n > rows*0.95) %>% 
+#       arrange(me) %>% pull(site) -> mes
+#     
+#     if(length(mes) > 0){
+#       
+#       temp2 %>%
+#         left_join(., dfc %>% filter(site == mes[1])) %>% 
+#         mutate(me = T2f-T2) %>% 
+#         mutate(lag_T2 = me - lag(me)) %>% 
+#         mutate(lead_T2 = me - lead(me)) %>%
+#         mutate(lag_T2f = T2f - lag(T2f)) %>% 
+#         mutate(lead_T2f = T2f - lead(T2f)) %>% 
+#         mutate(error = ifelse(abs(lead_T2) > 10 & abs(lag_T2) > 10, 1, 0)) %>% 
+#         mutate(error = ifelse(abs(me) > 10 & abs(lag_T2)+abs(lead_T2) > 10, 1, error)) %>% 
+#         mutate(error = error + lag(error) + lead(error)) %>% 
+#         mutate(error = ifelse(error > 1, 1, error)) %>% 
+#         mutate(T2f = ifelse((!is.na(error) & !is.na(lag_T2f) & error == 1 & abs(lag_T2f) >= 0.375) | (!is.na(error) & !is.na(lead_T2f) & error == 1 & abs(lead_T2f) >= 0.375), NA, T2f),
+#                me = ifelse((!is.na(error) & !is.na(lag_T2f) & error == 1 & abs(lag_T2f) >= 0.375) | (!is.na(error) & !is.na(lead_T2f) & error == 1 & abs(lead_T2f) >= 0.375), NA, me)) %>% 
+#         mutate(error = ifelse(error == 1 & !is.na(T2f), 0, error)) %>% 
+#         mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T2,
+#                T2f = ifelse(is.na(T2f), fill, T2f),
+#                fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T2,
+#                T2f = ifelse(is.na(T2f), fill, T2f),
+#                fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T2,
+#                T2f = ifelse(is.na(T2f), fill, T2f)) -> temp2
+#       
+#       # temp2 %>% as.matrix() %>% edit()
+#       temp2 %>% ggplot(aes_string(x="datetime")) +
+#         geom_line(aes_string(y = "T2f"), col = "cornflowerblue") +
+#         geom_line(aes_string(y = "T2"), col = "brown1") +
+#         geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
+#         #geom_line(aes_string(y = "rollsd_T2"), col = "green") +
+#         geom_line(aes_string(y = "error"), col = "black") +
+#         theme_minimal() +
+#         ylab("T2") + xlab("Date") -> GG3
+#       
+#       temp2 %>% mutate(time = paste(hour(datetime), minute(datetime), sep = ":")) %>% 
+#         group_by(time) %>% summarise(mean_me = quantile(me, 0.97, na.rm = T),
+#                                      min_me = quantile(me, 0.03, na.rm = T)) %>% 
+#         right_join(temp2 %>% mutate(time = paste(hour(datetime), minute(datetime), sep = ":"))) %>%
+#         arrange(datetime) %>% 
+#         as.data.table() -> temp2
+#       
+#       temp2 %>% mutate(me = T2f-T2) %>% 
+#         mutate(rollsd_T2 = rollapply(me, width=33, FUN=my_sd, fill = NA)+0.001) %>% 
+#         mutate(lag_T2 = me - lag(me)) %>% 
+#         mutate(lead_T2 = me - lead(me)) %>% 
+#         mutate(lag_T2f = T2f - lag(T2f)) %>% 
+#         mutate(lead_T2f = T2f - lead(T2f)) %>% 
+#         mutate(fac = (abs(lag_T2)+abs(lead_T2))/rollsd_T2) %>% 
+#         mutate(error = ifelse(fac > 10, 1, 0)) %>% 
+#         mutate(error = ifelse(abs(me) > 3 & abs(lag_T2) > 3 & fac > 5, 1, error),
+#                error = ifelse(abs(me) > 3 & abs(lead_T2) > 3 & fac > 5, 1, error)) %>% 
+#         mutate(error = ifelse(me > 0 & mean_me > 0 & me < mean_me*2, 0, error)) %>% 
+#         mutate(error = ifelse(me < 0 & mean_me < 0 & me > min_me*2, 0, error)) %>% 
+#         mutate(error = ifelse(error == 1 & lead_T2f*lag_T2f >= 0, 1, error)) %>% 
+#         mutate(error = error + lag(error) + lead(error)) %>% 
+#         mutate(error = ifelse(error > 1, 1, error)) %>% #as.matrix() %>% edit()
+#         mutate(T2f = ifelse((!is.na(error) & !is.na(lag_T2f) & error == 1 & abs(lag_T2f) >= 0.375) | (!is.na(error) & !is.na(lead_T2f) & error == 1 & abs(lead_T2f) >= 0.375), NA, T2f),
+#                me = ifelse((!is.na(error) & !is.na(lag_T2f) & error == 1 & abs(lag_T2f) >= 0.375) | (!is.na(error) & !is.na(lead_T2f) & error == 1 & abs(lead_T2f) >= 0.375), NA, me)) %>% 
+#         mutate(error = ifelse(error == 1 & !is.na(T2f), 0, error)) %>% 
+#         mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T2,
+#                T2f = ifelse(is.na(T2f), fill, T2f),
+#                fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T2,
+#                T2f = ifelse(is.na(T2f), fill, T2f),
+#                fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T2,
+#                T2f = ifelse(is.na(T2f), fill, T2f)) -> temp_T2
+#       
+#       temp_T2 %>% ggplot(aes_string(x="datetime")) +
+#         geom_line(aes_string(y = "T2f"), col = "cornflowerblue") +
+#         geom_line(aes_string(y = "T2"), col = "brown1") +
+#         geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
+#         geom_line(aes_string(y = "rollsd_T2"), col = "green") +
+#         geom_line(aes_string(y = "error"), col = "black") +
+#         theme_minimal() +
+#         ylab("T2") + xlab("Date") -> GG4
+#       
+#     } else {
+#       temp %>% filter(my == ii) %>% 
+#         select(datetime, T2) %>% 
+#         rename(T2f = T2)  -> temp_T2
+#     }
+#     
+#     #######################################3
+#     # T3
+#     
+#     temp %>% filter(my == ii) %>% 
+#       select(datetime, T3) %>% 
+#       filter(complete.cases(.)) %>% 
+#       rename(T3f = T3) -> temp2
+#     
+#     rows <- NROW(temp2)
+#     
+#     temp2 %>%
+#       left_join(., dfc) %>% 
+#       filter(site != i) %>% 
+#       arrange(site, datetime) %>% 
+#       mutate(me = abs(T3f-T3)) %>% 
+#       group_by(site) %>% 
+#       summarise(me = mean(me),
+#                 n = n()) %>% 
+#       filter(n > rows*0.95) %>% 
+#       arrange(me) %>% pull(site) -> mes
+#     
+#     if(length(mes) > 0){
+#       
+#       temp2 %>%
+#         left_join(., dfc %>% filter(site == mes[1])) %>% 
+#         mutate(me = T3f-T3) %>% 
+#         mutate(lag_T3 = me - lag(me)) %>% 
+#         mutate(lead_T3 = me - lead(me)) %>%
+#         mutate(lag_T3f = T3f - lag(T3f)) %>% 
+#         mutate(lead_T3f = T3f - lead(T3f)) %>% 
+#         mutate(error = ifelse(abs(lead_T3) > 10 & abs(lag_T3) > 10, 1, 0)) %>% 
+#         mutate(error = ifelse(abs(me) > 10 & abs(lag_T3)+abs(lead_T3) > 10, 1, error)) %>% 
+#         mutate(error = error + lag(error) + lead(error)) %>% 
+#         mutate(error = ifelse(error > 1, 1, error)) %>% 
+#         mutate(T3f = ifelse((!is.na(error) & !is.na(lag_T3f) & error == 1 & abs(lag_T3f) >= 0.375) | (!is.na(error) & !is.na(lead_T3f) & error == 1 & abs(lead_T3f) >= 0.375), NA, T3f),
+#                me = ifelse((!is.na(error) & !is.na(lag_T3f) & error == 1 & abs(lag_T3f) >= 0.375) | (!is.na(error) & !is.na(lead_T3f) & error == 1 & abs(lead_T3f) >= 0.375), NA, me)) %>% 
+#         mutate(error = ifelse(error == 1 & !is.na(T3f), 0, error)) %>% 
+#         mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T3,
+#                T3f = ifelse(is.na(T3f), fill, T3f),
+#                fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T3,
+#                T3f = ifelse(is.na(T3f), fill, T3f),
+#                fill = rollapply(me, width=7, FUN=my_mean, fill = NA) + T3,
+#                T3f = ifelse(is.na(T3f), fill, T3f)) -> temp2
+#       
+#       # temp2 %>% as.matrix() %>% edit()
+#       temp2 %>% ggplot(aes_string(x="datetime")) +
+#         geom_line(aes_string(y = "T3f"), col = "cornflowerblue") +
+#         geom_line(aes_string(y = "T3"), col = "brown1") +
+#         geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
+#         #geom_line(aes_string(y = "rollsd_T3"), col = "green") +
+#         geom_line(aes_string(y = "error"), col = "black") +
+#         theme_minimal() +
+#         ylab("T3") + xlab("Date") -> GG5
+#       
+#       temp2 %>% mutate(time = paste(hour(datetime), minute(datetime), sep = ":")) %>% 
+#         group_by(time) %>% summarise(mean_me = quantile(me, 0.97, na.rm = T),
+#                                      min_me = quantile(me, 0.03, na.rm = T)) %>% 
+#         right_join(temp2 %>% mutate(time = paste(hour(datetime), minute(datetime), sep = ":"))) %>%
+#         arrange(datetime) %>% 
+#         as.data.table() -> temp2
+#       
+#       temp2 %>% mutate(me = T3f-T3) %>% 
+#         #filter(datetime >= "2020-07-05 07:00:00") %>% 
+#         mutate(rollsd_T3 = rollapply(me, width=33, FUN=my_sd, fill = NA)+0.001) %>% 
+#         mutate(lag_T3 = me - lag(me)) %>% 
+#         mutate(lead_T3 = me - lead(me)) %>% 
+#         mutate(lag_T3f = T3f - lag(T3f)) %>% 
+#         mutate(lead_T3f = T3f - lead(T3f)) %>% 
+#         mutate(fac = (abs(lag_T3)+abs(lead_T3))/rollsd_T3) %>% 
+#         mutate(error = ifelse(fac > 10, 1, 0)) %>% 
+#         mutate(error = ifelse(abs(me) > 4 & abs(lag_T3) > 4 & fac > 7, 1, error),
+#                error = ifelse(abs(me) > 4 & abs(lead_T3) > 4 & fac > 7, 1, error)) %>% 
+#         mutate(error = ifelse(me > 0 & mean_me > 0 & me < mean_me*2, 0, error)) %>% 
+#         mutate(error = ifelse(me < 0 & mean_me < 0 & me > min_me*2, 0, error)) %>% 
+#         mutate(error = ifelse(error == 1 & lead_T3f*lag_T3f >= 0, 1, error)) %>% 
+#         mutate(error = error + lag(error) + lead(error)) %>% 
+#         mutate(error = ifelse(error > 1, 1, error)) %>% 
+#         mutate(T3f = ifelse((!is.na(error) & !is.na(lag_T3f) & error == 1 & abs(lag_T3f) >= 0.375) | (!is.na(error) & !is.na(lead_T3f) & error == 1 & abs(lead_T3f) >= 0.375), NA, T3f),
+#                me = ifelse((!is.na(error) & !is.na(lag_T3f) & error == 1 & abs(lag_T3f) >= 0.375) | (!is.na(error) & !is.na(lead_T3f) & error == 1 & abs(lead_T3f) >= 0.375), NA, me)) %>% 
+#         mutate(error = ifelse(error == 1 & !is.na(T3f), 0, error)) %>% 
+#         mutate(fill = rollapply(me, width=3, FUN=my_mean, fill = NA) + T3,
+#                T3f = ifelse(is.na(T3f), fill, T3f),
+#                fill = rollapply(me, width=5, FUN=my_mean, fill = NA) + T3,
+#                T3f = ifelse(is.na(T3f), fill, T3f)) -> temp_T3
+#       
+#       # temp_T3 %>% filter(datetime > "2020-01-27") %>% as.matrix() %>% edit()
+#       temp_T3 %>% ggplot(aes_string(x="datetime")) +
+#         geom_line(aes_string(y = "T3f"), col = "cornflowerblue") +
+#         geom_line(aes_string(y = "T3"), col = "brown1") +
+#         geom_line(aes_string(y = "me"), col = "darkgoldenrod") +
+#         geom_line(aes_string(y = "rollsd_T3"), col = "green") +
+#         geom_line(aes_string(y = "error"), col = "black") +
+#         theme_minimal() +
+#         ylab("T3") + xlab("Date") -> GG6
+#       
+#       print(plot_grid(plotlist = list(GG1,GG2,GG3,GG4,GG5,GG6), nrow = 3))
+#       
+#     } else {
+#       temp %>% filter(my == ii) %>% 
+#         select(datetime, T3) %>% 
+#         rename(T3f = T3) -> temp_T3
+#     }
+#     
+#     temp2 <- full_join(temp %>% filter(my == ii) %>% select(site, datetime, moist, date, probl),
+#                        temp_T1 %>% select(datetime, T1f) %>% 
+#                          rename(T1 = T1f))
+#     temp2 <- full_join(temp2,
+#                        temp_T2 %>% select(datetime, T2f) %>% 
+#                          rename(T2 = T2f))
+#     temp2 <- full_join(temp2,
+#                        temp_T3 %>% select(datetime, T3f) %>% 
+#                          rename(T3 = T3f))
+#     
+#     dftemp <- bind_rows(dftemp,temp2)
+#     
+#   }
+#   dfall <- bind_rows(dfall, dftemp)
+# }
+# dev.off()
 
 ###############################################################################
 # PLOT CORRECTED
 
-pdf("visuals/Temperature_graphs_corrected.pdf", 10, 5)
-for(i in sites){
-  #i <- sites[3]
-  print(i)
-  dfall %>% filter(site == i) %>% 
-    #group_by(date) %>% 
-    #summarise_at(vars(i, "soil"), funs(mean, min, max), na.rm = T) %>% 
-    #lapply(function(x) replace(x, is.infinite(x),NA)) %>% as_tibble() %>% 
-    ggplot(aes_string(x="datetime")) +
-    geom_line(aes_string(y = "T3"), col = "cornflowerblue") +
-    geom_line(aes_string(y = "T2"), col = "brown1") +
-    geom_line(aes_string(y = "T1"), col = "darkgoldenrod") +
-    theme_minimal() +
-    ylab("Temperature") + xlab("Date")+
-    scale_y_continuous(limits = c(-20, 35))+
-    ggtitle(i) -> GG
-  print(GG)
+if(!"dfall" %in% ls()){
   
+  dfall <- dfc; rm(dfc)
+  
+  pdf("visuals/Temperature_graphs_corrected.pdf", 10, 5)
+  for(i in sites){
+    #i <- sites[1]
+    print(i)
+    dfall %>% filter(site == i) %>% 
+      mutate(across(T1:T3, ~ifelse(probl == 1, NA, .x))) %>% 
+      mutate(T3 = ifelse(probl == 3, NA, T3)) %>% 
+      #group_by(date) %>% 
+      #summarise_at(vars(i, "soil"), funs(mean, min, max), na.rm = T) %>% 
+      #lapply(function(x) replace(x, is.infinite(x),NA)) %>% as_tibble() %>% 
+      ggplot(aes_string(x="datetime")) +
+      geom_line(aes_string(y = "T3"), col = "cornflowerblue") +
+      geom_line(aes_string(y = "T2"), col = "brown1") +
+      geom_line(aes_string(y = "T1"), col = "darkgoldenrod") +
+      theme_minimal() +
+      ylab("Temperature") + xlab("Date")+
+      scale_y_continuous(limits = c(-20, 35))+
+      ggtitle(i) -> GG
+    print(GG)
+    
+  }
+  dev.off()
+  
+} else {
+  
+  pdf("visuals/Temperature_graphs_corrected.pdf", 10, 5)
+  for(i in sites){
+    #i <- sites[1]
+    print(i)
+    dfall %>% filter(site == i) %>% 
+      mutate(across(T1:T3, ~ifelse(probl == 1, NA, .x))) %>% 
+      mutate(T3 = ifelse(probl == 3, NA, T3)) %>% 
+      #group_by(date) %>% 
+      #summarise_at(vars(i, "soil"), funs(mean, min, max), na.rm = T) %>% 
+      #lapply(function(x) replace(x, is.infinite(x),NA)) %>% as_tibble() %>% 
+      ggplot(aes_string(x="datetime")) +
+      geom_line(aes_string(y = "T3"), col = "cornflowerblue") +
+      geom_line(aes_string(y = "T2"), col = "brown1") +
+      geom_line(aes_string(y = "T1"), col = "darkgoldenrod") +
+      theme_minimal() +
+      ylab("Temperature") + xlab("Date")+
+      scale_y_continuous(limits = c(-20, 35))+
+      ggtitle(i) -> GG
+    print(GG)
+    
+  }
+  dev.off()
+  
+  dfall %>% 
+    bind_rows(., dfc %>% select(-my) %>% filter(probl == 1)) %>% 
+    arrange(site, datetime) -> dfall
 }
-dev.off()
 
-dfall %>% 
-  bind_rows(., dfc %>% select(-my) %>% filter(probl == 1)) %>% 
-  arrange(site, datetime) -> dfall
-
-for(i in sites){
-  
-  dfall %>% filter(site == i) %>% pull(date) %>% max() -> maxd
-  
-  dfall %>% filter(!c(site == i & date == maxd)) -> dfall
-  
-}
 
 round2 <- function(x) round(x,2)
 

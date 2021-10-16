@@ -942,7 +942,8 @@ df2 %>% mutate(probl = ifelse(site == siteid &
 siteid <- 104
 
 office <- c(as_date(as_date(min(df$datetime)):as_date("2019-07-01")))
-probls <- c(as_date(as_date("2019-07-02"):as_date("2021-07-06")))
+probls <- c()
+probls_T12 <- c(as_date(as_date("2019-07-02"):as_date("2021-07-06")))
 hattu <- c()
 
 df2 %>% mutate(probl = ifelse(site == siteid &
@@ -953,7 +954,10 @@ df2 %>% mutate(probl = ifelse(site == siteid &
                         1, probl)) %>% 
   mutate(probl = ifelse(site == siteid &
                           date %in% hattu,
-                        3, probl)) -> df2
+                        3, probl)) %>% 
+  mutate(probl = ifelse(site == siteid &
+                          date %in% probls_T12,
+                        4, probl)) -> df2
 
 # SITE = 107
 siteid <- 107
@@ -1629,6 +1633,7 @@ if(!"dfall" %in% ls()){
     print(i)
     dfall %>% filter(site == i) %>% 
       mutate(across(T1:T3, ~ifelse(probl == 1, NA, .x))) %>% 
+      mutate(across(c(T1,T3), ~ifelse(probl == 4, NA, .x))) %>% 
       mutate(T3 = ifelse(probl == 3, NA, T3)) %>% 
       #group_by(date) %>% 
       #summarise_at(vars(i, "soil"), funs(mean, min, max), na.rm = T) %>% 
@@ -1650,10 +1655,11 @@ if(!"dfall" %in% ls()){
   
   pdf("visuals/Temperature_graphs_corrected.pdf", 10, 5)
   for(i in sites){
-    #i <- sites[1]
+    #i <- 104
     print(i)
     dfall %>% filter(site == i) %>% 
       mutate(across(T1:T3, ~ifelse(probl == 1, NA, .x))) %>% 
+      mutate(across(c(T1,T3), ~ifelse(probl == 4, NA, .x))) %>% 
       mutate(T3 = ifelse(probl == 3, NA, T3)) %>% 
       #group_by(date) %>% 
       #summarise_at(vars(i, "soil"), funs(mean, min, max), na.rm = T) %>% 

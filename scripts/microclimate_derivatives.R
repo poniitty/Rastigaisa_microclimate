@@ -131,11 +131,12 @@ daily %>%
          year = year(date)) %>% 
   group_by(site, year, month) %>% 
   summarise(ndays = n(),
-            moist_mean = round(mean(moist_mean, na.rm = T),2),
-            moist_absmax = round(max(moist_max, na.rm = T),2),
-            moist_absmin = round(min(moist_min, na.rm = T),2),
-            moist_meanmax = round(mean(moist_max, na.rm = T),2),
-            moist_meanmin = round(mean(moist_min, na.rm = T),2)) %>% 
+            moist_sd = round(sd(moist_mean, na.rm = T),2),
+            moist_cv = round(sd(moist_mean, na.rm = T)/mean(moist_mean, na.rm = T),2),
+            moist_med = round(median(moist_mean, na.rm = T),1),
+            moist_mean = round(mean(moist_mean, na.rm = T),1),
+            moist_absmax = round(max(moist_max, na.rm = T),1),
+            moist_absmin = round(min(moist_min, na.rm = T),1)) %>% 
   left_join(., daycount) %>% 
   mutate(day_frac_moist = ndays/ndaysmax) %>% 
   relocate(day_frac_moist, .after = ndays) %>% 

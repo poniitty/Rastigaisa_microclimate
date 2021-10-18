@@ -1,0 +1,238 @@
+
+
+Metadata and attribute explanations for the logger datasets
+updated 2021-10-18
+
+----------------------------------------------------------------------------------
+
+File "./output/tomst_data.csv" contains the following attributes:
+
+datetime # Date and time, Greenwhich Mean Time, normal time, no light saving time included
+
+T1	# Soil temperature (°C, -7.5 cm) from Tomst TMS-4 logger	
+
+T2	# Surface temperature (°C, 0 cm) from Tomst TMS-4 logger. Be carefull about vegetation/water/litter effect on these!!!
+
+T3	# Air temperature (°C, 15 cm) from Tomst TMS-4 logger
+
+moist	# Raw moisture count from Tomst TMS-4 logger, not calibrated
+
+site	# Study site code
+
+probl		# Error code for Tomst logger measurements: 
+		# 0 = ok
+		# 1 = Clearly errorneous data (e.g., logger fallen and off the ground)
+		# 3 = T3 without solar shielding but data may be useful for some purposes, T1 & T2 ok.
+		# 4 = T2 and moist ok, T1 and T3 problematic
+
+-------------------------------------------------------------------------
+
+File "./output/tomst_data_daily.csv" contains the following attributes:
+
+
+site		# Study site code	
+
+date		# Date in Finnish time (UTC+2)
+
+T1_prop		# Proportion of Tomst T1 temperature measurements existing within the specific day (100 means whole coverage, 0 no measurement)
+
+T2_prop		# Proportion of Tomst T2 temperature measurements existing within the specific day (100 means whole coverage, 0 no measurement)
+
+T3_prop		# Proportion of Tomst T3 temperature measurements existing within the specific day (100 means whole coverage, 0 no measurement)
+
+moist_prop	# Proportion of Tomst moisture measurements existing within the specific day (100 means whole coverage, 0 no measurement)
+	
+T1_mean		# Daily mean soil temperature (°C, -7.5 cm) from Tomst TMS-4 logger
+
+T1_min		# Daily minimum soil temperature (°C, -7.5 cm cm) from Tomst TMS-4 logger
+
+T1_max		# Daily maximum soil temperature (°C, -7.5 cm) from Tomst TMS-4 logger
+
+T2_mean		# Daily mean surface temperature (°C, 0 cm) from Tomst TMS-4 logger
+
+T2_min		# Daily minimum surface temperature (°C, 0 cm) from Tomst TMS-4 logger
+
+T2_max		# Daily maximum surface temperature (°C, 0 cm) from Tomst TMS-4 logger
+
+T3_mean		# Daily mean air temperature (°C, 15 cm) from Tomst TMS-4 logger
+
+T3_min		# Daily minimum air temperature (°C, 15 cm) from Tomst TMS-4 logger
+
+T3_max		# Daily maximum air temperature (°C, 15 cm) from Tomst TMS-4 logger
+
+moist_mean	# Daily mean soil moisture (vol%, 0 - (-)15 cm) from Tomst TM-4 logger
+
+moist_min	# Daily minimum soil moisture (vol%, 0 - (-)15 cm) from Tomst TM-4 logger
+
+moist_max	# Daily maximum soil moisture (vol%, 0 - (-)15 cm) from Tomst TM-4 logger
+
+probl		# Error code for Tomst logger measurements: 
+		# 0 = ok
+		# 1 = Clearly errorneous data (e.g., logger fallen and off the ground)
+		# 3 = T3 without solar shielding but data may be useful for some purposes, T1 & T2 ok.
+		# 4 = T2 and moist ok, T1 and T3 problematic
+
+------------------------------------------------------------------------------
+
+File "./output/tomst_data_monthly.csv" contains the following attributes:
+
+
+site		# Study site code	
+
+year		# Year
+
+month		# Month
+
+day_frac_T1	# Proportion of days in a month used in T1-related calculations (1 = full coverage, 0 = no days included)
+
+day_frac_T2	# Proportion of days in a month used in T2-related calculations (1 = full coverage, 0 = no days included)
+
+day_frac_T3	# Proportion of days in a month used in T3-related calculations (1 = full coverage, 0 = no days included)
+
+day_frac_moist	# Proportion of days in a month used in moisture-related calculations (1 = full coverage, 0 = no days included)
+
+T1_mean		# Monthly mean soil temperature (°C, -6 cm) from Tomst TMS-4 logger
+
+T1_absmax	# Monthly absolute maximum soil temperature (°C, -6 cm) from Tomst TMS-4 logger
+
+T1_absmin	# Monthly absolute minimum soil temperature (°C, -6 cm) from Tomst TMS-4 logger	
+
+T1_meanmax	# Monthly mean daily maximum soil temperature (°C, -6 cm) from Tomst TMS-4 logger
+
+T1_meanmin	# Monthly mean daily minimum soil temperature (°C, -6 cm) from Tomst TMS-4 logger
+
+T2_mean		# Monthly mean surface temperature (°C, 0 cm) from Tomst TMS-4 logger
+
+T2_absmax	# Monthly absolute maximum surface temperature (°C, 0 cm) from Tomst TMS-4 logger	
+
+T2_absmin	# Monthly absolute minimum surface temperature (°C, 0 cm) from Tomst TMS-4 logger
+
+T2_meanmax	# Monthly mean daily maximum surface temperature (°C, 0 cm) from Tomst TMS-4 logger
+
+T2_meanmin	# Monthly mean daily minimum surface temperature (°C, 0 cm) from Tomst TMS-4 logger
+
+T3_mean		# Monthly mean air temperature (°C, 15 cm) from Tomst TMS-4 logger
+
+T3_absmax	# Monthly absolute maximum air temperature (°C, 15 cm) from Tomst TMS-4 logger
+
+T3_absmin	# Monthly absolute minimum air temperature (°C, 15 cm) from Tomst TMS-4 logger
+
+T3_meanmax	# Monthly mean daily maximum air temperature (°C, 15 cm) from Tomst TMS-4 logger
+
+T3_meanmin	# Monthly mean daily minimum air temperature (°C, 15 cm) from Tomst TMS-4 logger
+
+moist_sd	# Monthly standard deviation of daily mean moisture values (vol%, 0 - (-)15 cm) from Tomst TMS-4 logger
+
+moist_cv	# Monthly coefficient of variation of daily mean moisture values (vol%, 0 - (-)15 cm) from Tomst TMS-4 logger
+
+moist_med	# Monthly median of daily mean moisture values (vol%, 0 - (-)15 cm) from Tomst TMS-4 logger
+
+moist_mean	# Monthly mean of daily mean moisture values (vol%, 0 - (-)15 cm) from Tomst TMS-4 logger
+
+moist_absmax	# Monthly absolute maximum of soil moisture (vol%, 0 - (-)15 cm) from Tomst TMS-4 logger
+
+moist_absmin	# Monthly absolute minimum of soil moisture (vol%, 0 - (-)15 cm) from Tomst TMS-4 logger
+
+T1_TDD		# Monthly Thawing degree day, sum of daily mean T1 temperatures exceeding 0 °C
+
+T1_GDD3		# Monthly Growing degree day, sum of daily mean T1 temperatures exceeding 3 °C
+
+T1_GDD5		# Monthly Growing degree day, sum of daily mean T1 temperatures exceeding 5 °C
+
+T1_FDD		# Monthly Freezing degree day, sum of daily mean T1 temperatures below 0 °C
+
+T1_TDD_days	# Monthly Thawing degree day days, count of days when daily mean T1 temperatures exceeds 0 °C
+
+T1_GDD3_days	# Monthly Growing degree day days, count of days when daily mean T1 temperatures exceeds 3 °C
+
+T1_GDD5_days	# Monthly Growing degree day days, count of days when daily mean T1 temperatures exceeds 5 °C
+
+T1_FDD_days	# Monthly Freezing degree day days, count of days when daily mean T1 temperatures is below 0 °C
+
+T2_TDD		# Monthly Thawing degree day, sum of daily mean T2 temperatures exceeding 0 °C
+
+T2_GDD3		# Monthly Growing degree day, sum of daily mean T2 temperatures exceeding 3 °C
+
+T2_GDD5		# Monthly Growing degree day, sum of daily mean T2 temperatures exceeding 5 °C
+
+T2_FDD		# Monthly Freezing degree day, sum of daily mean T2 temperatures below 0 °C
+
+T2_TDD_days	# Monthly Thawing degree day days, count of days when daily mean T2 temperatures exceeds 0 °C
+
+T2_GDD3_days	# Monthly Growing degree day days, count of days when daily mean T2 temperatures exceeds 3 °C
+
+T2_GDD5_days	# Monthly Growing degree day days, count of days when daily mean T2 temperatures exceeds 5 °C
+
+T2_FDD_days	# Monthly Freezing degree day days, count of days when daily mean T2 temperatures is below 0 °C
+
+T3_TDD		# Monthly Thawing degree day, sum of daily mean T3 temperatures exceeding 0 °C
+
+T3_GDD3		# Monthly Growing degree day, sum of daily mean T3 temperatures exceeding 3 °C
+
+T3_GDD5		# Monthly Growing degree day, sum of daily mean T3 temperatures exceeding 5 °C
+
+T3_FDD		# Monthly Freezing degree day, sum of daily mean T3 temperatures below 0 °C
+
+T3_TDD_days	# Monthly Thawing degree day days, count of days when daily mean T3 temperatures exceeds 0 °C
+
+T3_GDD3_days	# Monthly Growing degree day days, count of days when daily mean T3 temperatures exceeds 3 °C
+
+T3_GDD5_days	# Monthly Growing degree day days, count of days when daily mean T3 temperatures exceeds 5 °C
+
+T3_FDD_days	# Monthly Freezing degree day days, count of days when daily mean T31 temperatures is below 0 °C
+
+
+----------------------------------------------------------------------------------
+
+File "./output/snow_variables.csv" contains the following attributes:
+
+# Logger data was not filtered in any way prior the calculations (only at-office data removed). 
+# Therefore think carefully which sites can be included in analyses.
+# Variables are calculated for hydrological years, e.g., variable for year 2021 means a period from 2020-09-01 to 2021-08-31.
+
+site		# Study site code	
+
+hydro_year	# The hydrological year used in variable calculations (hydrological year starts from 1st of September)
+
+snow_days	# Number of snow days based on T2 temperatures (no T variability accounted, therefore even shallow snowpack included. May overestimated the true number of snow days)
+	
+max_snow_period	# Maximum number of consecutive snow days based on T2 temperatures
+
+n_snow_period	# Number of separate snow periods based on T2 temperatures
+
+first_snow_date	# First date with snow cover based on T2 temperatures
+
+last_snow_date	# Last date with snow cover based on T2 temperatures
+
+last_snow_doy	# Day of year of the last date with snow cover based on T2 temperatures
+
+T1_ft		# Number of freeze-thaw events in T1 (-6 cm)
+
+T2_ft		# Number of freeze-thaw events in T2 (0 cm)
+
+T3_ft		# Number of freeze-thaw events in T3 (15 cm)
+
+deep_snow_days_T2		# Number of days with deep insulating snowpack based on T2 temperatures (no daily variability in minimum of 9 consecutive days)	
+
+max_deep_snow_period_T2		# Maximum number of consecutive days with deep insulating snowpack based on T2 temperatures
+
+n_deep_snow_period_T2		# Number of separate periods with deep insulating snowpack based on T2 temperatures
+
+first_deep_snow_date_T2		# First date with deep snowpack based on T2 temperatures 
+
+last_deep_snow_date_T2		# Last date with deep snowpack based on T2 temperatures 
+
+last_deep_snow_doy_T2		# Day of year of the last date with deep snowpack based on T2 temperatures 
+
+deep_snow_days_T3		# Number of days with deep insulating snow pack based on near T3 temperatures 
+
+max_deep_snow_period_T3		# Maximum number of consecutive days with deep insulating snow pack based on T3 temperatures
+
+n_deep_snow_period_T3		# Number of separate periods with deep insulating snow pack based on T3 temperatures 
+
+first_deep_snow_date_T3		# First date with deep snowpack based on T3 temperatures 
+
+last_deep_snow_date_T3		# Last date with deep snowpack  based on T3 temperatures 
+
+last_deep_snow_doy_T3		# Day of year of the last date with deep snowpack based on T3 temperatures
+
